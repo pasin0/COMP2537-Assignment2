@@ -1,5 +1,8 @@
 Self-graded Assignment 1 Checklist
 
+Student Name: Aleen Dawood
+Student Set: 2D
+
 Criteria  
 ========  
 [x]  A home page links to signup and login, if not logged in; and links to members and signout, if logged in.  
