@@ -35,7 +35,7 @@ app.use(express.static('public'));
 
 // Handles GET requests to sign up and returns sign up form HTML page
 app.get('/signup', (req, res) => {
-  const filePath = path.join(__dirname, 'views', 'signup.html'); // Build the abosulte path to signup.html
+  const filePath = path.join(__dirname, 'views', 'signup.html'); // Build the absolute path to signup.html
   res.sendFile(filePath);
 });
 
@@ -77,7 +77,7 @@ app.post('/signup', async (req, res) => {
   req.session.name = name;
 
   // Redirect to members-only area
-  res.redirect('/members');
+  res.redirect('/');
 });
 
 app.get('/members', (req, res) => {
@@ -164,7 +164,7 @@ app.post('/login', async (req, res) => {
   req.session.authenticated = true;
   req.session.name = user.name;
 
-  res.redirect('/members');
+  res.redirect('/');
 });
 
 // MongoDB setup
