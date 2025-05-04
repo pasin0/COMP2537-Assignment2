@@ -108,11 +108,18 @@ app.get('/members', (req, res) => {
 
 // Logs out the user
 app.get('/logout', (req, res) => {
-  req.session.destroy(err => {
+  const sid = req.session.id;
+
+  req.session.destroy(async (err) => {
     if (err) {
-      return res.send("Error logging out");
+      console.error("Error destroying session:", err);
+      return res.status(500).send("Error logging out.");
     }
-    res.send("<h2>You are logged out. <a href='/'>Home</a></h2>");
+
+    console.log(`Session ${sid} destroyed`);
+    setTimeout(() => {
+      res.send("<h2>You are logged out. <a href='/'>Home</a></h2>");
+    }, 300); 
   });
 });
 
