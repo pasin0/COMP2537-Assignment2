@@ -31,7 +31,7 @@ app.use(session({
 }));
 
 // Accesses the public folder for images
-app.use(express.static(__dirname + "/public"));
+app.use(express.static('public'));
 
 // Handles GET requests to sign up and returns sign up form HTML page
 app.get('/signup', (req, res) => {
@@ -65,7 +65,7 @@ app.post('/signup', async (req, res) => {
     return res.send(`<p>Email already in use.</p><a href="/signup">Try again</a>`);
   }
 
-  // Inset new user into the database
+  // Insert new user into the database
   await userCollection.insertOne({
     name,
     email,
@@ -130,7 +130,7 @@ app.get('/login', (req, res) => {
   `);
 });
 
-// Handle form submssion
+// Handle form submission
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -186,5 +186,30 @@ client.connect()
 
 // TEMP: Root route
 app.get("/", (req, res) => {
-  res.send("Home page up and running.");
+  if (!req.session.authenticated) {
+    return res.send(`
+      <h1>Welcome</h1>
+      <a href="/signup">Sign up</a><br>
+      <a href="/login">Log in</a>
+    `);
+  } else {
+    const name = req.session.name || "Guest";
+    return res.send(`
+      <h1>Hello, ${name}!</h1>
+      <a href="/members">Go to Members Area</a><br>
+      <a href="/logout">Logout</a>
+    `);
+  }
+});
+
+app.use((req, res) => {
+  res.status(404).send(`
+  <!DOCTYPE html>
+    <html>
+    <head><title>404</title></head>
+    <body>
+      <h1>404 – Page Not Found</h1>
+      <a href="/">Go Home</a>
+    </body>
+    </html>`);
 });
