@@ -77,7 +77,7 @@ app.post('/signup', async (req, res) => {
   req.session.name = name;
 
   // Redirect to members-only area
-  res.redirect('/');
+  res.redirect('/members');
 });
 
 app.get('/members', (req, res) => {
