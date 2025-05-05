@@ -25,6 +25,7 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
+    dbName: 'authdb',
     crypto: { secret: process.env.MONGODB_SESSION_SECRET }
   }),
   cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
