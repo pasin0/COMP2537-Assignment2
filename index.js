@@ -81,9 +81,9 @@ app.post('/signup', async (req, res) => {
 });
 
 app.get('/members', (req, res) => {
-  // If the user is not logged in, redirect to login
+  // If the user is not logged in, redirect to home page
   if (!req.session.authenticated) {
-    return res.redirect('/login');
+    return res.redirect('/');
   }
 
   // Get the name from the session
