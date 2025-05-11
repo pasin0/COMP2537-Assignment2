@@ -15,8 +15,31 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-//Middleware to parse POST form data
+//EJS
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+
+// Middleware to parse POST form data
 app.use(express.urlencoded({ extended: false }));
+
+// Middleware for Admin checking
+function isAdmin(req) {
+  return req.session.authenticated && req.session.user_type === "admin";
+}
+
+function adminOnly(req, res, next) {
+  if (!req.session.authenticated) {
+    return res.redirect("/login");
+  }
+
+  if (req.session.user_type !== "admin") {
+    res.status(403).render("unauthorized");
+    return;
+  }
+
+  next();
+}
 
 // Session setup
 app.use(session({
@@ -36,8 +59,7 @@ app.use(express.static('public'));
 
 // Handles GET requests to sign up and returns sign up form HTML page
 app.get('/signup', (req, res) => {
-  const filePath = path.join(__dirname, 'views', 'signup.html'); // Build the absolute path to signup.html
-  res.sendFile(filePath);
+  res.render('signup', { emailTaken: false });
 });
 
 // Handles POST request when a user submits the signup form
@@ -61,21 +83,24 @@ app.post('/signup', async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 12); // 12 salt rounds
 
   // Check if email already exists
-  const existingUser = await userCollection.findOne({ email: email });
+  const existingUser = await userCollection.findOne({ email });
   if (existingUser) {
-    return res.send(`<p>Email already in use.</p><a href="/signup">Try again</a>`);
+    return res.render('signup', { emailTaken: true });
   }
 
   // Insert new user into the database
   await userCollection.insertOne({
     name,
     email,
-    password: hashedPassword
+    password: hashedPassword,
+    user_type: "user" // default user
   });
 
   // Store user session data
   req.session.authenticated = true;
   req.session.name = name;
+  req.session.user_type = "user";
+  req.session.email = email;
 
   // Redirect to members-only area
   res.redirect('/members');
@@ -93,19 +118,9 @@ app.get('/members', (req, res) => {
   // Create an array of image filenames
   const images = ['froggy.jpeg', 'monkey.jpeg', 'strawberry.jpeg'];
 
-  // Pick a random image from the array
-  const randomIndex = Math.floor(Math.random() * images.length);
-  const selectedImage = images[randomIndex];
-
-  // Return the HTML response
-  res.send(`
-    <h1>Welcome, ${name}!</h1>
-    <p>Here’s a random image for you <3:</p>
-    <img src="/${selectedImage}" alt="Random Image" style="max-width: 300px;">
-    <br><br>
-    <a href="/logout">Logout</a>
-  `);
+  res.render("members", { name, images });
 });
+
 
 // Logs out the user
 app.get('/logout', (req, res) => {
@@ -118,24 +133,38 @@ app.get('/logout', (req, res) => {
     }
 
     console.log(`Session ${sid} destroyed`);
-    setTimeout(() => {
-      res.send("<h2>You are logged out. <a href='/'>Home</a></h2>");
-    }, 300); 
+    res.render("logout");
   });
 });
 
 // Login form
 app.get('/login', (req, res) => {
-  res.send(`
-    <h1>Login</h1>
-    <form action="/login" method="POST">
-      <label>Email:</label><br>
-      <input type="email" name="email" required><br><br>
-      <label>Password:</label><br>
-      <input type="password" name="password" required><br><br>
-      <button type="submit">Login</button>
-    </form>
-  `);
+  res.render("login");
+});
+
+// Admin route
+app.get("/admin", adminOnly, async (req, res) => {
+  const users = await userCollection.find().toArray();
+  res.render("admin", { users });
+});
+
+// Promote/Demote routes
+app.get("/promote/:email", adminOnly, async (req, res) => {
+  const { email } = req.params;
+  if (req.session.email === email) {
+    req.session.user_type = "admin";
+  }
+  await userCollection.updateOne({ email }, { $set: { user_type: "admin" } });
+  res.redirect("/admin");
+});
+
+app.get("/demote/:email", adminOnly, async (req, res) => {
+  const { email } = req.params;
+  if (req.session.email === email) {
+    req.session.user_type = "user";
+  }
+  await userCollection.updateOne({ email }, { $set: { user_type: "user" } });
+  res.redirect("/admin");
 });
 
 // Handle form submission
@@ -151,26 +180,37 @@ app.post('/login', async (req, res) => {
   const validation = schema.validate({ email, password });
 
   if (validation.error) {
-    return res.send(`<p>Login error: ${validation.error.message}</p><a href="/login">Go back</a>`);
+    return res.render('error', {
+      message: `Login error: ${validation.error.message}`,
+      redirectURL: "/login"
+    });
   }
 
   // Find user by email
   const user = await userCollection.findOne({ email });
 
   if (!user) {
-    return res.send(`<p>No account found with that email.</p><a href="/login">Try again</a>`);
+    return res.render('error', {
+      message: "No account found with that email.",
+      redirectURL: "/login"
+    });
   }
 
   // Check password with bcrypt
   const match = await bcrypt.compare(password, user.password);
 
   if (!match) {
-    return res.send(`<p>Incorrect password.</p><a href="/login">Try again</a>`);
+    return res.render('error', {
+      message: "Incorrect password.",
+      redirectURL: "/login"
+    });
   }
 
   // Store login state in session
   req.session.authenticated = true;
   req.session.name = user.name;
+  req.session.user_type = user.user_type;
+  req.session.email = user.email;
 
   res.redirect('/');
 });
@@ -194,30 +234,12 @@ client.connect()
 
 // TEMP: Root route
 app.get("/", (req, res) => {
-  if (!req.session.authenticated) {
-    return res.send(`
-      <h1>Welcome</h1>
-      <a href="/signup">Sign up</a><br>
-      <a href="/login">Log in</a>
-    `);
-  } else {
-    const name = req.session.name || "Guest";
-    return res.send(`
-      <h1>Hello, ${name}!</h1>
-      <a href="/members">Go to Members Area</a><br>
-      <a href="/logout">Logout</a>
-    `);
-  }
+  const name = req.session.name || null;
+  const user_type = req.session.user_type || null;
+  res.render("index", { name, user_type });
 });
 
+// Error 404 page
 app.use((req, res) => {
-  res.status(404).send(`
-  <!DOCTYPE html>
-    <html>
-    <head><title>404</title></head>
-    <body>
-      <h1>404 – Page Not Found</h1>
-      <a href="/">Go Home</a>
-    </body>
-    </html>`);
+  res.status(404).render("404");
 });

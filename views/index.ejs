@@ -1,0 +1,24 @@
+<%- include("templates/header", { title: "Home" }) %>
+
+  <div class="text-center mt-10">
+    <% if (!name) { %>
+      <!-- Guest view -->
+      <h2 class="text-2xl mb-4">Welcome</h2>
+      <a href="/signup"
+        class="inline-block bg-pink-400 hover:bg-pink-500 text-white font-semibold px-4 py-2 rounded-full shadow-md transition">Sign
+        Up</a>
+      <a href="/login"
+        class="inline-block bg-yellow-300 hover:bg-yellow-400 text-gray-900 font-semibold px-4 py-2 rounded-full ml-2 shadow-md transition">Log
+        In</a>
+      <% } else { %>
+        <!-- Logged-in view -->
+        <h2 class="text-2xl mb-4">Hello, <%= name %>!</h2>
+        <a href="/members" class="text-blue-600 underline block">Go to Members Area</a>
+        <% if (user_type==='admin' ) { %>
+          <a href="/admin" class="text-green-600 underline block">Go to Admin Panel</a>
+          <% } %>
+            <a href="/logout" class="text-blue-600 underline block">Logout</a>
+            <% } %>
+  </div>
+
+  <%- include("templates/footer") %>

@@ -1,0 +1,11 @@
+<li class="p-4 border rounded flex justify-between items-center">
+    <span>
+        <%= user.name %> - <%= user.email %> - <%= user.user_type %>
+    </span>
+
+    <% if (user.user_type==="user" ) { %>
+        <a href="/promote/<%= user.email %>" class="text-green-600 underline">Promote to Admin</a>
+        <% } else { %>
+            <a href="/demote/<%= user.email %>" class="text-red-600 underline">Demote to User</a>
+            <% } %>
+</li>

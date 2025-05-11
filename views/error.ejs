@@ -1,0 +1,10 @@
+<%- include("templates/header", { title: "Error" }) %>
+
+    <div class="text-center mt-16">
+        <p class="text-red-600 text-lg font-semibold mb-4">
+            <%= message %>
+        </p>
+        <a href="<%= redirectURL %>" class="text-blue-500 hover:underline">Try again</a>
+    </div>
+
+    <%- include("templates/footer") %>
